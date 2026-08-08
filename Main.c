@@ -2,6 +2,8 @@
 
   #include <stdio.h>
   #include <uuid/uuid.h>
+  #include <unistd.h>
+  #include <limits.h>
 
   void genFileName(char* fileName, size_t fileNameSize){
     if(fileNameSize<37){
@@ -14,10 +16,22 @@
     uuid_generate_random(uuid);
     char uuidStr[37];
     uuid_unparse_lower(uuid, uuidStr);
+
+    snprintf(fileName, sizeof(uuidStr), "%s", uuidStr);
   }
 
-  void readSelf(char* content){
+  void getSelfFileName(char* out){
+    char path[PATH_MAX];
+    ssize_t len;
 
+    len = readlink("/proc/self/exe", path, sizeof(path)-1);
+    if(len == -1){
+      perror("Reading own file name failed.");
+    }
+
+    path[len] = '\0';
+
+    
   }
   
   int main(void){
