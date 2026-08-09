@@ -4,6 +4,7 @@
   #include <uuid/uuid.h>
   #include <unistd.h>
   #include <limits.h>
+  #include <string.h>
 
   void genFileName(char* fileName, size_t fileNameSize){
     if(fileNameSize<37){
@@ -20,7 +21,7 @@
     snprintf(fileName, sizeof(uuidStr), "%s", uuidStr);
   }
 
-  void getSelfFileName(char* out){
+  void getSelfFileName(char** out){
     char path[PATH_MAX];
     ssize_t len;
 
@@ -31,12 +32,16 @@
 
     path[len] = '\0';
 
-    
+    char* token;
+    char* prev = strtok(path, "/");
+    while((token=strtok(NULL, "/")) != NULL) prev = token;
+    *out = prev;
   }
   
   int main(void){
-    const char* code = "#include <stdio.h>%c%cint main(void){%c const char* code = %c%s%c;%c  printf(code, 10, 10, 10, 34, code, 34, 10, 10, 10);%c  return 0;%c}";
-    printf(code, 10, 10, 10, 34, code, 34, 10, 10, 10);
+    char* fileName;
+    getSelfFileName(&fileName);
+    printf("%s\n", fileName);
     return 0;
   }
 
