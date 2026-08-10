@@ -21,7 +21,7 @@
     snprintf(fileName, sizeof(uuidStr), "%s", uuidStr);
   }
 
-  void getSelfFileName(char** out){
+  void getSelfFilePath(char** out){
     char path[PATH_MAX];
     ssize_t len;
 
@@ -31,17 +31,13 @@
     }
 
     path[len] = '\0';
-
-    char* token;
-    char* prev = strtok(path, "/");
-    while((token=strtok(NULL, "/")) != NULL) prev = token;
-    *out = prev;
+    *out = path;
   }
+
+  void readFileContent(unsigned char** fileContent, const char* path){
+    FILE* binary = fopen(path, "rb");
   
   int main(void){
-    char* fileName;
-    getSelfFileName(&fileName);
-    printf("%s\n", fileName);
     return 0;
   }
 
