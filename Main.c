@@ -34,9 +34,29 @@
     *out = path;
   }
 
-  void readFileContent(unsigned char** fileContent, const char* path){
+  void readFileContent(char** fileContent, const char* path){
     FILE* binary = fopen(path, "rb");
-  
+
+    if(binary == NULL){
+      char errMessage[strlen(path)+50];
+      snprintf(errMessage, sizeof(errMessage), "Reading file %s failed.", path);
+      perror(errMessage);
+      return;
+    }
+
+    fseek(binary, 0, SEEK_END);
+    long fileLength = ftell(binary);
+
+    char binaryContent[fileLength];
+
+    fseek(binary, 0, SEEK_SET);
+    for(long i = 0; i < fileLength; ++i){
+      binaryContent[i] = fgetc(binary);
+    }
+    fclose(binary);
+
+    *fileContent = binaryContent;
+    } 
   int main(void){
     return 0;
   }
