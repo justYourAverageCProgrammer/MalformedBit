@@ -5,6 +5,7 @@
   #include <unistd.h>
   #include <limits.h>
   #include <string.h>
+  #include <stdlib.h>
 
   void genFileName(char* fileName, size_t fileNameSize){
     if(fileNameSize<37){
@@ -28,13 +29,15 @@
     len = readlink("/proc/self/exe", path, sizeof(path)-1);
     if(len == -1){
       perror("Reading own file name failed.");
+      *out = NULL;
+      return;
     }
 
     path[len] = '\0';
     *out = path;
   }
 
-  void readFileContent(char** fileContent, const char* path){
+  void readFileContent(unsigned char** fileContent, const char* path){
     FILE* binary = fopen(path, "rb");
 
     if(binary == NULL){
@@ -47,7 +50,7 @@
     fseek(binary, 0, SEEK_END);
     long fileLength = ftell(binary);
 
-    char binaryContent[fileLength];
+    unsigned char* binaryContent = (unsigned char*)malloc(fileLength*sizeof(unsigned char));
 
     fseek(binary, 0, SEEK_SET);
     for(long i = 0; i < fileLength; ++i){
@@ -56,8 +59,10 @@
     fclose(binary);
 
     *fileContent = binaryContent;
-    } 
+  }
+
   int main(void){
+
     return 0;
   }
 
