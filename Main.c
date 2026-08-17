@@ -37,6 +37,24 @@
     *out = path;
   }
 
+  void genFile(unsigned char* content, size_t contentLength, char* fileName){
+    FILE* file = fopen(fileName, "wb");
+
+    if(file == NULL){
+      char errMessage[strlen(fileName)+50];
+      snprintf(errMessage, sizeof(errMessage), "Creating file %s failed.", fileName);
+      perror(errMessage);
+      return;
+    }
+
+    if(fwrite(content, sizeof(unsigned char), contentLength, file) != contentLength){
+      perror("Error writing to file");
+      return;
+    }
+
+    fclose(file);
+  }
+
   void readFileContent(unsigned char** fileContent, const char* path){
     FILE* binary = fopen(path, "rb");
 
@@ -48,7 +66,7 @@
     }
 
     fseek(binary, 0, SEEK_END);
-    long fileLength = ftell(binary);
+    size_t fileLength = ftell(binary);
 
     unsigned char* binaryContent = (unsigned char*)malloc(fileLength*sizeof(unsigned char));
 
@@ -62,6 +80,12 @@
   }
 
   int main(void){
+    char fileName[37];
+    genFileName(fileName, 37);
+    if(fileName[0]=='\0'){
+      return -1;
+    }
+
 
     return 0;
   }
